@@ -1,0 +1,36 @@
+{
+  "system": "specguard-langgraph",
+  "metrics": {
+    "count": 30,
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "per_label": {
+      "ambiguity": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "conflict": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      },
+      "normal": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "omission": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      }
+    },
+    "average_validation_attempts": 1.0,
+    "average_replan_rounds": 0.0
+  }
+}

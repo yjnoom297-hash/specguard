@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SpecGuard · 요구사항 품질 검증</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root { --navy:#17365d; --blue:#2f75b5; --pale:#f3f7fb; --line:#d7dee8; --text:#162235; }
+    * { box-sizing:border-box; } body { margin:0; font-family:Arial,"Apple SD Gothic Neo",sans-serif; color:var(--text); background:#eef3f8; }
+    header { background:var(--navy); color:white; padding:20px 30px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:24px; } header p { margin:4px 0 0; color:#cdd9e8; }
+    .status { padding:7px 12px; border-radius:20px; background:#244d78; font-size:13px; }
+    main { max-width:1440px; margin:22px auto; padding:0 20px 40px; display:grid; grid-template-columns:390px 1fr; gap:18px; }
+    .panel { background:white; border:1px solid var(--line); border-radius:14px; box-shadow:0 4px 18px #17365d10; padding:20px; }
+    h2 { margin:0 0 15px; font-size:18px; } label { display:block; font-size:13px; font-weight:700; margin:13px 0 6px; }
+    input, select, textarea { width:100%; border:1px solid #bdc9d7; border-radius:8px; padding:10px; font:inherit; background:white; }
+    textarea { min-height:270px; resize:vertical; line-height:1.55; }
+    button { border:0; border-radius:8px; padding:11px 15px; font-weight:700; cursor:pointer; }
+    .primary { width:100%; margin-top:14px; color:white; background:var(--blue); } .secondary { background:#e8eef5; color:var(--navy); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .phase-history { position:relative; margin:2px 0 18px 8px; }
+    .phase-row { position:relative; display:grid; grid-template-columns:36px minmax(0,1fr); gap:12px; padding-bottom:12px; }
+    .phase-row:not(:last-child)::before { content:""; position:absolute; left:14px; top:28px; bottom:-3px; width:3px; background:#dce3eb; }
+    .phase-row.done:not(:last-child)::before { background:#55ad7a; }
+    .history-dot { position:relative; z-index:1; display:grid; place-items:center; width:31px; height:31px; border:3px solid #afb9c6; border-radius:50%; background:white; color:#758396; font-size:11px; font-weight:800; }
+    .phase-row.active .history-dot { border-color:#2878d0; color:#2878d0; box-shadow:0 0 0 4px #e2efff; animation:pulse 1.15s infinite; }
+    .phase-row.done .history-dot { border-color:#27945a; background:#27945a; color:white; box-shadow:0 0 0 3px #e0f4e8; }
+    .history-content { padding:10px 13px; border:1px solid #dbe2eb; border-radius:10px; background:#f9fbfd; }
+    .phase-row.active .history-content { border-color:#78ace4; background:#f0f7ff; }
+    .phase-row.done .history-content { border-color:#9bceb1; background:#f0faf4; }
+    .history-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:4px; }
+    .history-head h3 { margin:0; font-size:14px; }
+    .history-meta { display:flex; align-items:center; gap:8px; font-size:11px; color:#6e7d90; }
+    .history-state { padding:3px 7px; border-radius:10px; background:#e8edf2; font-weight:700; }
+    .phase-row.active .history-state { color:#155ea8; background:#dbeeff; }
+    .phase-row.done .history-state { color:#24784c; background:#d9f1e3; }
+    .history-content p { margin:0; color:#647488; font-size:12px; line-height:1.4; }
+    .process-board { overflow-x:auto; margin-bottom:17px; padding:19px 15px 16px; border:1px solid #d9e2ec; border-radius:12px; background:#f8fafc; }
+    .process-flow { display:grid; grid-template-columns:repeat(5,minmax(126px,1fr)); min-width:680px; }
+    .process-step { position:relative; padding:0 9px; text-align:center; color:#6e7d90; }
+    .process-step:not(:last-child)::after { content:""; position:absolute; z-index:0; top:18px; left:calc(50% + 22px); width:calc(100% - 44px); height:3px; background:#d7e0e9; }
+    .process-step.done:not(:last-child)::after { background:#49a972; }
+    .process-circle { position:relative; z-index:1; display:grid; place-items:center; width:39px; height:39px; margin:0 auto 10px; border:3px solid #aeb9c7; border-radius:50%; background:white; color:#758396; font-size:13px; font-weight:800; }
+    .process-step.active .process-circle { border-color:#2878d0; color:#2878d0; box-shadow:0 0 0 5px #dcebff; animation:pulse 1.15s infinite; }
+    .process-step.done .process-circle { border-color:#27945a; background:#27945a; color:white; box-shadow:0 0 0 4px #dff3e8; }
+    .process-step h3 { margin:0 0 6px; color:#405269; font-size:13px; }
+    .process-step.active h3 { color:#155ea8; }
+    .process-step.done h3 { color:#24784c; }
+    .process-step p { min-height:34px; margin:0; font-size:10px; line-height:1.4; }
+    .process-detail { display:block; margin-top:8px; color:#8794a4; font-size:9px; line-height:1.35; }
+    .process-status { display:inline-block; margin-top:8px; padding:3px 8px; border-radius:10px; background:#e9edf2; font-size:9px; font-weight:700; }
+    .process-step.active .process-status { color:#155ea8; background:#dceeff; }
+    .process-step.done .process-status { color:#24784c; background:#d9f1e3; }
+    .graph-view { overflow-x:auto; margin-bottom:18px; padding:14px; border:1px solid #dbe3ec; border-radius:12px; background:#f8fafc; }
+    .graph-canvas { min-width:720px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .graph-row { display:flex; justify-content:center; align-items:center; gap:8px; }
+    .graph-node { min-width:94px; padding:9px 10px; border:2px solid #c5ced9; border-radius:9px; background:white; color:#68788b; text-align:center; font-size:11px; line-height:1.3; font-weight:700; transition:.2s ease; }
+    .graph-node small { display:block; margin-top:3px; color:inherit; font-size:9px; font-weight:500; opacity:.82; }
+    .graph-node.active { border-color:#2878d0; background:#eaf4ff; color:#155ea8; box-shadow:0 0 0 4px #ddebff; animation:pulse 1.15s infinite; }
+    .graph-node.done { border-color:#27945a; background:#e8f7ef; color:#24784c; }
+    .graph-node.done::before { content:"✓ "; font-weight:900; }
+    .graph-arrow { color:#8796a8; font-size:19px; font-weight:900; }
+    .graph-down { color:#8796a8; font-size:20px; line-height:1; }
+    .graph-loop { display:flex; align-items:center; gap:8px; padding:5px 12px; border:1px dashed #aebac8; border-radius:18px; color:#66778c; font-size:10px; }
+    .graph-loop .graph-node { min-width:86px; padding:6px 9px; }
+    .worker-box { width:100%; max-width:500px; padding:11px; border:1px solid #ccd7e2; border-radius:11px; background:#fff; }
+    .worker-title { margin-bottom:8px; text-align:center; color:#5f7084; font-size:10px; font-weight:700; }
+    .worker-row { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+    .worker-row .graph-node { min-width:0; }
+    .merge-line { width:330px; height:15px; border-left:2px solid #9cabbc; border-right:2px solid #9cabbc; border-bottom:2px solid #9cabbc; border-radius:0 0 8px 8px; }
+    .graph-legend { align-self:flex-end; display:flex; gap:10px; color:#65758a; font-size:10px; }
+    .legend-dot { display:inline-block; width:9px; height:9px; margin-right:3px; border:2px solid #aeb9c7; border-radius:50%; vertical-align:-1px; background:white; }
+    .legend-dot.active { border-color:#2878d0; }
+    .legend-dot.done { border-color:#27945a; background:#27945a; }
+    .empty { min-height:310px; display:grid; place-items:center; color:#6b7786; text-align:center; }
+    .summary { padding:13px 15px; background:var(--pale); border-left:4px solid var(--blue); margin-bottom:14px; }
+    .finding { border:1px solid var(--line); border-radius:10px; margin:10px 0; padding:15px; }
+    .finding-head { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+    .badge { padding:4px 8px; border-radius:12px; font-size:12px; background:#e7eef7; }
+    .high { background:#ffe1e1; color:#a02323; } .medium { background:#fff0cd; color:#825800; }
+    .grid { display:grid; grid-template-columns:120px 1fr; gap:7px 12px; font-size:14px; line-height:1.5; }
+    .grid b { color:#45566a; } .actions { display:flex; justify-content:flex-end; gap:9px; margin-top:15px; }
+    .execution-flow { margin-top:14px; border:1px solid #d7e1ec; border-radius:10px; background:#f8fbff; padding:13px 10px 11px; }
+    .execution-flow-title { display:flex; justify-content:space-between; align-items:center; margin:0 4px 11px; font-size:12px; color:#53657a; }
+    .flow-scroll { overflow-x:auto; padding:2px 2px 8px; }
+    .flow-track { display:flex; align-items:flex-start; min-width:max-content; }
+    .flow-stage { position:relative; width:82px; flex:0 0 82px; text-align:center; }
+    .flow-stage:not(:last-child)::after { content:""; position:absolute; top:11px; left:52px; width:60px; height:3px; background:#d8e0e9; z-index:0; }
+    .flow-stage.done:not(:last-child)::after { background:#43a66f; }
+    .flow-dot { position:relative; z-index:1; display:grid; place-items:center; width:24px; height:24px; margin:0 auto 7px; border:3px solid #aeb9c7; border-radius:50%; background:white; transition:.2s ease; }
+    .flow-stage.active .flow-dot { border-color:#2878d0; background:white; box-shadow:0 0 0 4px #dcebff; animation:pulse 1.15s infinite; }
+    .flow-stage.done .flow-dot { border-color:#27945a; background:#27945a; box-shadow:0 0 0 3px #dcf4e7; }
+    .flow-stage.done .flow-dot::after { content:"✓"; color:white; font-size:12px; font-weight:800; }
+    .flow-label { display:block; padding:0 3px; font-size:11px; line-height:1.25; color:#758397; word-break:keep-all; }
+    .flow-stage.active .flow-label { color:#1f67b5; font-weight:700; }
+    .flow-stage.done .flow-label { color:#247b4e; font-weight:700; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px #dcebff} 50%{box-shadow:0 0 0 7px #eaf3ff} }
+    .issues-panel { grid-column:1/-1; }
+    .issue-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; }
+    .issue-card { border:1px solid var(--line); border-radius:10px; padding:14px; background:#fbfcfe; }
+    .issue-meta { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; font-size:12px; color:#65758a; }
+    .issue-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .issue-tools select { width:220px; padding:8px 10px; }
+    .issue-card p { margin:7px 0 0; font-size:14px; line-height:1.45; }
+    @media (max-width:900px) { main { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header><div><h1>SpecGuard</h1><p>Multi-Agent 기반 웹 요구사항 품질 검증</p></div><span class="status">{{ health }}</span></header>
+  <main>
+    <section class="panel">
+      <h2>요구사항 입력</h2>
+      <label>문서 ID</label><input v-model="form.document_id">
+      <label>도메인</label><select v-model="form.domain"><option>주문·결제</option><option>회원</option><option>배송</option></select>
+      <label>검토 범위</label><select v-model="form.scope"><option value="all">전체</option><option value="ambiguity">모호성</option><option value="omission">누락</option><option value="conflict">충돌</option></select>
+      <label>요구사항</label><textarea v-model="form.text"></textarea>
+      <button class="secondary" @click="sample">대표 예제 불러오기</button>
+      <button class="primary" :disabled="running || form.text.length < 10" @click="review">{{ running ? '검토 중…' : '검토 시작' }}</button>
+    </section>
+    <section class="panel">
+      <h2>검토 결과</h2>
+      <div class="graph-view">
+        <div class="graph-canvas">
+          <div class="graph-legend"><span><i class="legend-dot"></i>대기</span><span><i class="legend-dot active"></i>실행 중</span><span><i class="legend-dot done"></i>완료</span></div>
+          <div class="graph-row">
+            <div class="graph-node" :class="nodeStatus('route')">요청 분류<small>Route</small></div><span class="graph-arrow">→</span>
+            <div class="graph-node" :class="nodeStatus('plan')">분석 계획<small>Supervisor</small></div><span class="graph-arrow">→</span>
+            <div class="graph-node" :class="nodeStatus('gate')">작업 검증<small>Gate</small></div><span class="graph-arrow">→</span>
+            <div class="graph-node" :class="nodeStatus('research')">근거 조회<small>MCP</small></div><span class="graph-arrow">→</span>
+            <div class="graph-node" :class="nodeStatus('replan_check')">충분성 확인<small>Replan Check</small></div>
+          </div>
+          <div class="graph-loop"><span>근거 부족 시</span><span class="graph-arrow">↺</span><div class="graph-node" :class="nodeStatus('replan')">재계획<small>최대 1회</small></div><span class="graph-arrow">→</span><span>MCP 재조회</span></div>
+          <span class="graph-down">↓</span>
+          <div class="graph-node" :class="nodeStatus('dispatch_workers')">작업 분배<small>Fan-out</small></div>
+          <span class="graph-down">↓</span>
+          <div class="worker-box"><div class="worker-title">동시 실행되는 전문 Worker</div><div class="worker-row">
+            <div class="graph-node" :class="nodeStatus('review_worker')">모호성<small>Ambiguity</small></div>
+            <div class="graph-node" :class="nodeStatus('review_worker')">누락<small>Omission</small></div>
+            <div class="graph-node" :class="nodeStatus('review_worker')">충돌<small>Conflict</small></div>
+          </div></div>
+          <div class="merge-line"></div><span class="graph-down">↓</span>
+          <div class="graph-row">
+            <div class="graph-node" :class="nodeStatus('write')">결과 작성<small>Writer</small></div><span class="graph-arrow">→</span>
+            <div class="graph-node" :class="nodeStatus('validate')">품질 검증<small>Validator</small></div><span class="graph-arrow">→</span>
+            <div class="graph-node" :class="nodeStatus('finalize')">최종 완료<small>Final Answer</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="empty" v-if="!result"><div><b>요구사항을 입력하고 검토를 시작하세요.</b><br>결함별 근거·수정안·테스트가 여기에 표시됩니다.</div></div>
+      <template v-else>
+        <div class="summary">{{ result.summary }}</div>
+        <article class="finding" v-for="item in result.findings" :key="item.finding_id">
+          <div class="finding-head"><input style="width:auto" type="checkbox" :value="item.finding_id" v-model="selected"><b>{{ item.finding_id }}</b><span class="badge">{{ labels[item.type] }}</span><span class="badge" :class="item.severity.toLowerCase()">{{ item.severity }}</span></div>
+          <div class="grid"><b>문제 구간</b><span>{{ item.evidence }}</span><b>판정</b><span>{{ item.problem }}</span><b>근거</b><span>{{ item.rule }}</span><b>수정안</b><span>{{ item.revision }}</span><b>Given</b><span>{{ item.test.given }}</span><b>When</b><span>{{ item.test.when }}</span><b>Then</b><span>{{ item.test.then }}</span></div>
+        </article>
+        <div class="actions"><button class="secondary" :disabled="!selected.length" @click="approve">선택 승인</button><button class="primary" style="width:auto;margin:0" :disabled="!approved.length" @click="issues">승인 이슈 등록</button></div>
+        <div class="summary" v-if="issueMessage">{{ issueMessage }}</div>
+      </template>
+    </section>
+    <section class="panel issues-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px">
+        <h2 style="margin:0">등록된 이슈</h2>
+        <div class="issue-tools">
+          <select v-model="issueDocumentId" @change="loadIssues">
+            <option value="">전체 문서</option>
+            <option v-for="documentId in issueDocumentIds" :key="documentId" :value="documentId">{{ documentId }}</option>
+          </select>
+          <button class="secondary" @click="loadIssues">새로고침</button>
+        </div>
+      </div>
+      <div class="summary" v-if="issueDocumentId">문서 <b>{{ issueDocumentId }}</b>에 등록된 이슈를 표시합니다.</div>
+      <div class="empty" style="min-height:100px" v-if="!registeredIssues.length">{{ issueDocumentId ? '해당 문서에 등록된 이슈가 없습니다.' : '아직 등록된 이슈가 없습니다.' }}</div>
+      <div class="issue-list" v-else>
+        <article class="issue-card" v-for="issue in registeredIssues" :key="issue.issue_id">
+          <div class="issue-meta"><b>{{ issue.issue_id }}</b><span>{{ formatDate(issue.created) }}</span></div>
+          <p style="margin:0 0 8px"><b>문서 ID:</b> {{ issue.document_id || '미확인' }}</p>
+          <span class="badge">{{ labels[issue.finding.type] || issue.finding.type }}</span>
+          <span class="badge" :class="(issue.finding.severity || '').toLowerCase()">{{ issue.finding.severity }}</span>
+          <p><b>{{ issue.finding_id }}</b> · {{ issue.finding.problem }}</p>
+          <p style="color:#52657a">수정안: {{ issue.finding.revision }}</p>
+        </article>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+const { createApp, reactive, ref } = Vue;
+createApp({ setup(){
+  const sampleText='R-01. 사용자가 주문 버튼을 누르면 시스템은 빠르게 주문을 처리한다.\nR-02. 결제에 실패하면 필요한 처리를 수행한다.\nR-03. 주문은 결제 후 24시간 이내에 취소할 수 있다.\nR-04. 사용자는 결제 후 48시간 이내에 주문을 취소할 수 있다.';
+  const form=reactive({document_id:'ORDER-001',domain:'주문·결제',scope:'all',text:''});
+  const result=ref(null), reviewId=ref(''), selected=ref([]), approved=ref([]), logs=ref([]), running=ref(false), health=ref('연결 확인 중'), active=ref(''), registeredIssues=ref([]), issueDocumentId=ref(''), issueDocumentIds=ref([]);
+  const completed=reactive(new Set()), issueMessage=ref('');
+  const steps=['route','plan','gate','research','replan_check','dispatch_workers','review_worker','write','validate','finalize'];
+  const stepLabels={route:'요청 분류',plan:'분석 계획',gate:'작업 검증',research:'근거 조회',replan_check:'충분성 확인',dispatch_workers:'작업 분배',review_worker:'전문 분석',write:'결과 작성',validate:'품질 검증',finalize:'최종 완료'};
+  const phases=[
+    {name:'입력 이해',description:'검토 요청을 분류하고 분석 계획을 세웁니다.',nodes:['route','plan','gate']},
+    {name:'근거 수집',description:'요구사항 문맥과 품질 규칙을 조회합니다.',nodes:['research','replan_check']},
+    {name:'결함 분석',description:'모호성·누락·충돌을 전문 Worker가 분석합니다.',nodes:['dispatch_workers','review_worker']},
+    {name:'결과 작성',description:'근거, 수정안과 테스트 조건을 작성합니다.',nodes:['write']},
+    {name:'품질 검증',description:'결과를 다시 검증하고 최종 보고서를 확정합니다.',nodes:['validate','finalize']}
+  ];
+  const labels={ambiguity:'모호성',omission:'누락',conflict:'충돌'};
+  fetch('/health').then(r=>r.json()).then(()=>health.value='● 서버 연결됨').catch(()=>health.value='● 연결 실패');
+  async function loadIssues(){ const q=new URLSearchParams(); if(issueDocumentId.value) q.set('document_id',issueDocumentId.value); const r=await fetch('/issues?'+q.toString()); if(r.ok){const data=await r.json(); registeredIssues.value=data.issues; issueDocumentIds.value=data.document_ids;} }
+  function formatDate(value){ return value ? new Date(value).toLocaleString('ko-KR') : ''; }
+  loadIssues();
+  function sample(){ form.text=sampleText; }
+  function mark(node){ if(active.value) completed.add(active.value); active.value=node; }
+  function groupStatus(phase){ if(phase.nodes.includes(active.value)) return 'active'; if(phase.nodes.every(node=>completed.has(node))) return 'done'; return 'waiting'; }
+  function statusLabel(status){ return status==='done' ? '완료' : status==='active' ? '진행 중' : '대기'; }
+  function nodeStatus(node){ if(active.value===node) return 'active'; if(completed.has(node)) return 'done'; return 'waiting'; }
+  function review(){
+    running.value=true; result.value=null; selected.value=[]; approved.value=[]; logs.value=[]; completed.clear(); issueMessage.value='';
+    const q=new URLSearchParams(form); const es=new EventSource('/reviews/stream?'+q.toString());
+    es.onmessage=(e)=>{ if(e.data==='[DONE]'){ es.close(); running.value=false; completed.add(active.value); active.value=''; return; }
+      const data=JSON.parse(e.data); logs.value.push({...data,receivedAt:new Date().toISOString()}); if(data.node) mark(data.node);
+      if(data.type==='FinalAnswer'){ result.value=data.review; reviewId.value=data.review_id; }
+      if(data.type==='Error'){ issueMessage.value=data.message; }
+    };
+    es.onerror=()=>{ es.close(); running.value=false; issueMessage.value='스트리밍 연결이 종료되었습니다.'; };
+  }
+  async function approve(){ const r=await fetch(`/reviews/${reviewId.value}/approve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({finding_ids:selected.value})}); if(r.ok){approved.value=[...selected.value]; issueMessage.value=`${approved.value.length}건을 승인했습니다.`;} }
+  async function issues(){ const r=await fetch(`/reviews/${reviewId.value}/issues`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({finding_ids:approved.value})}); const data=await r.json(); issueMessage.value=r.ok?`이슈 생성 완료: ${data.issues.map(x=>x.issue_id).join(', ')}`:(data.detail||'등록 실패'); if(r.ok){issueDocumentId.value=form.document_id.trim(); await loadIssues();} }
+  return {form,result,selected,approved,logs,running,health,active,completed,steps,stepLabels,phases,labels,issueMessage,registeredIssues,issueDocumentId,issueDocumentIds,sample,review,approve,issues,loadIssues,groupStatus,statusLabel,nodeStatus,formatDate};
+}}).mount('#app');
+</script>
+</body>
+</html>
